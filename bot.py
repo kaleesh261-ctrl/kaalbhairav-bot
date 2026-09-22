@@ -45,7 +45,9 @@ def init_db():
         locked_voice INTEGER DEFAULT 0,
         locked_video INTEGER DEFAULT 0,
         locked_photo INTEGER DEFAULT 0,
-        locked_document INTEGER DEFAULT 0
+        locked_document INTEGER DEFAULT 0,
+        captcha_on INTEGER DEFAULT 0,
+        approval_on INTEGER DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS warnings (
         chat_id INTEGER,
@@ -71,16 +73,6 @@ def init_db():
         word TEXT,
         PRIMARY KEY (chat_id, word)
     );
-    """)
-    db.commit()
-    # Safe migration - add bot_active if not exists
-    try:
-        db.execute("ALTER TABLE groups ADD COLUMN bot_active INTEGER DEFAULT 1")
-        db.commit()
-    except:
-        pass
-    db.close()
-    db.executescript("""
     CREATE TABLE IF NOT EXISTS captchas (
         chat_id INTEGER,
         user_id INTEGER,
@@ -95,39 +87,16 @@ def init_db():
         PRIMARY KEY (chat_id, user_id)
     );
     """)
-init_db()
-
-flood_data = defaultdict(list)
-
-LOCK_TYPES = {
-    'media': 'locked_media', 'stickers': 'locked_stickers',
-    'gifs': 'locked_gifs', 'links': 'locked_links',
-    'forwards': 'locked_forwards', 'games': 'locked_games',
-    'polls': 'locked_polls', 'voice': 'locked_voice',
-    'video': 'locked_video', 'photo': 'locked_photo',
-    'document': 'locked_document'
-}
-
-# ==================== HELPERS ====================
-def get_group(chat_id):
-    db = get_db()
-    g = db.execute("SELECT * FROM groups WHERE chat_id=?", (chat_id,)).fetchone()
-    if not g:
-        db.execute("INSERT INTO groups (chat_id, added_at) VALUES (?,?)",
-                   (chat_id, datetime.now().strftime("%Y-%m-%d %H:%M")))
-        db.commit()
-        g = db.execute("SELECT * FROM groups WHERE chat_id=?", (chat_id,)).fetchone()
-    db.close()
-    return dict(g)
-
-def register_group(chat_id, title, added_by):
-    db = get_db()
-    g = db.execute("SELECT * FROM groups WHERE chat_id=?", (chat_id,)).fetchone()
-    if not g:
-        db.execute("INSERT INTO groups (chat_id, title, added_by, added_at) VALUES (?,?,?,?)",
-                   (chat_id, title, added_by, datetime.now().strftime("%Y-%m-%d %H:%M")))
-    else:
-        db.execute("UPDATE groups SET title=? WHERE chat_id=?", (title, chat_id))
+    db.commit()
+    # For old DB that might not have new columns
+    try:
+        db.execute("ALTER TABLE groups ADD COLUMN captcha_on INTEGER DEFAULT 0")
+    except:
+        pass
+    try:
+        db.execute("ALTER TABLE groups ADD COLUMN approval_on INTEGER DEFAULT 0")
+    except:
+        pass
     db.commit()
     db.close()
 
