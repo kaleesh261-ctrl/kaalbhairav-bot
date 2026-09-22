@@ -80,7 +80,21 @@ def init_db():
     except:
         pass
     db.close()
-
+    db.executescript("""
+    CREATE TABLE IF NOT EXISTS captchas (
+        chat_id INTEGER,
+        user_id INTEGER,
+        code INTEGER DEFAULT 0,
+        solved INTEGER DEFAULT 0,
+        PRIMARY KEY (chat_id, user_id)
+    );
+    CREATE TABLE IF NOT EXISTS approvals (
+        chat_id INTEGER,
+        user_id INTEGER,
+        status INTEGER DEFAULT 0,
+        PRIMARY KEY (chat_id, user_id)
+    );
+    """)
 init_db()
 
 flood_data = defaultdict(list)
